@@ -8,6 +8,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
+import org.hibernate.query.Query;
 import org.springframework.stereotype.Repository;
 
 import javax.annotation.PreDestroy;
@@ -28,15 +29,15 @@ public class PlayerRepositoryDB implements IPlayerRepository {
         properties.put(Environment.PASS, "root");
         properties.put(Environment.HBM2DDL_AUTO, "update");
         sessionFactory = new Configuration()
-                .setProperties(properties)
                 .addAnnotatedClass(Player.class)
+                .setProperties(properties)
                 .buildSessionFactory();
     }
 
     @Override
     public List<Player> getAll(int pageNumber, int pageSize) {
         try (Session session = sessionFactory.openSession()) {
-            return session.createNativeQuery("SELECT * FROM player", Player.class)
+            return session.createNativeQuery("SELECT * FROM rpg.player", Player.class)
                     .setFirstResult(pageSize * pageNumber)
                     .setMaxResults(pageSize)
                     .getResultList();
@@ -46,21 +47,19 @@ public class PlayerRepositoryDB implements IPlayerRepository {
     @Override
     public int getAllCount() {
         try (Session session = sessionFactory.openSession()) {
-            return session.createNamedQuery("getAllCount", Player.class)
-                    .list()
-                    .size();
+            Query<Long> getAllCount = session.createNamedQuery("getAllCount", Long.class);
+            return Math.toIntExact(getAllCount.uniqueResult());
         }
     }
 
     @Override
     public Player save(Player player) {
-        Player p;
         try (Session session = sessionFactory.openSession()) {
             Transaction transaction = session.beginTransaction();
-            p = (Player) session.save(player);
+            session.save(player);
             transaction.commit();
+            return player;
         }
-        return p;
     }
 
     @Override
